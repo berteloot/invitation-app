@@ -307,19 +307,22 @@ def test_print():
     print("PRINT TEST: This should appear in Render logs", flush=True)
     return "Print test done"
 
-@app.route('/test-webhook')
+@app.route('/test-webhook', methods=['GET', 'POST'])
 def test_webhook():
+    app_logger.info("Test webhook endpoint called")
     test_data = {
-        "test": "hello",
-        "timestamp": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-        "source": "test-endpoint",
-        "version": "1.0"
+        "test": True,
+        "timestamp": datetime.now().isoformat(),
+        "message": "This is a test webhook call"
     }
+    app_logger.info(f"Sending test data: {json.dumps(test_data, indent=2)}")
     success = send_to_make_webhook(test_data)
     if success:
-        return jsonify({"status": "success", "message": "Webhook test successful"}), 200
+        app_logger.info("Test webhook sent successfully")
+        return jsonify({"status": "success", "message": "Test webhook sent successfully"}), 200
     else:
-        return jsonify({"status": "error", "message": "Webhook test failed"}), 500
+        app_logger.error("Failed to send test webhook")
+        return jsonify({"status": "error", "message": "Failed to send test webhook"}), 500
 
 if __name__ == '__main__':
     app_logger.info("App is starting in __main__")
