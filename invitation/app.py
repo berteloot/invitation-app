@@ -36,6 +36,8 @@ for handler in root_logger.handlers:
 app.logger.propagate = True
 app.logger.setLevel(logging.INFO)
 
+app_logger.info("BOOT-MARK 2025-05-17-23-20")
+
 # Load environment variables
 load_dotenv()
 
@@ -337,5 +339,6 @@ def test_webhook():
 
 if __name__ == '__main__':
     app_logger.info("App is starting in __main__")
+    app_logger.info("BOOT-MARK 2025-05-17-23-20")
     port = int(os.getenv('PORT', 10000))
     app.run(host='0.0.0.0', port=port) 
