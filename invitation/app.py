@@ -11,6 +11,9 @@ import logging
 from logging.handlers import RotatingFileHandler
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+import json
+from urllib3 import PoolManager
+import socket
 
 # Configure logging to use stdout/stderr
 logging.basicConfig(
@@ -109,45 +112,98 @@ def record_login_attempt(ip, success):
 
 MAKE_WEBHOOK_URL = "https://hook.us1.make.com/hz3fzz8mba7sn4se4rl4klo55qbjd1j8"
 
-# Configure requests session with retry strategy
+# Configure requests session with advanced retry strategy
 session = requests.Session()
+
+# Custom retry strategy with more granular control
 retry_strategy = Retry(
-    total=3,  # number of retries
-    backoff_factor=1,  # wait 1, 2, 4 seconds between retries
-    status_forcelist=[500, 502, 503, 504]  # HTTP status codes to retry on
+    total=5,  # increased number of retries
+    backoff_factor=0.5,  # shorter initial backoff
+    backoff_max=10,  # maximum backoff time
+    status_forcelist=[408, 429, 500, 502, 503, 504],  # expanded list of retry status codes
+    allowed_methods=["POST"],  # only retry POST requests
+    respect_retry_after_header=True  # respect server's retry-after header
 )
-adapter = HTTPAdapter(max_retries=retry_strategy)
+
+# Configure connection pooling
+adapter = HTTPAdapter(
+    max_retries=retry_strategy,
+    pool_connections=10,  # number of connections to keep in pool
+    pool_maxsize=10,  # maximum number of connections in pool
+    pool_block=False  # don't block when pool is full
+)
+
+# Mount the adapter for both HTTP and HTTPS
 session.mount("https://", adapter)
 session.mount("http://", adapter)
 
+# Configure timeouts
+DEFAULT_TIMEOUT = 10  # seconds
+CONNECT_TIMEOUT = 5   # seconds
+READ_TIMEOUT = 5      # seconds
+
 def send_to_make_webhook(data):
-    app_logger.info(f"Preparing to send webhook data: {data}")
+    """
+    Send data to Make.com webhook with enhanced reliability and error handling.
+    """
+    app_logger.info(f"Preparing to send webhook data: {json.dumps(data, indent=2)}")
+    
+    # Prepare headers
+    headers = {
+        'Content-Type': 'application/json',
+        'User-Agent': 'RSVP-App/1.0',
+        'Accept': 'application/json'
+    }
+    
     try:
         start_time = time.time()
-        response = session.post(MAKE_WEBHOOK_URL, json=data, timeout=10)
-        duration = time.time() - start_time
         
+        # Make the request with explicit timeouts
+        response = session.post(
+            MAKE_WEBHOOK_URL,
+            json=data,
+            headers=headers,
+            timeout=(CONNECT_TIMEOUT, READ_TIMEOUT),
+            verify=True  # verify SSL certificates
+        )
+        
+        duration = time.time() - start_time
         app_logger.info(f"Webhook request completed in {duration:.2f} seconds")
         app_logger.info(f"Webhook response status: {response.status_code}")
         app_logger.info(f"Webhook response headers: {dict(response.headers)}")
-        app_logger.info(f"Webhook response text: {response.text}")
         
-        if response.status_code >= 400:
-            app_logger.error(f"Webhook request failed with status {response.status_code}")
+        # Try to parse response as JSON
+        try:
+            response_json = response.json()
+            app_logger.info(f"Webhook response body: {json.dumps(response_json, indent=2)}")
+        except json.JSONDecodeError:
+            app_logger.info(f"Webhook response text: {response.text}")
+        
+        # Handle different response status codes
+        if response.status_code == 200:
+            app_logger.info("Webhook request successful")
+            return True
+        elif response.status_code == 429:
+            app_logger.warning("Rate limit exceeded, will retry with backoff")
+            return False
+        elif 500 <= response.status_code < 600:
+            app_logger.error(f"Server error: {response.status_code}")
+            return False
+        else:
+            app_logger.error(f"Unexpected status code: {response.status_code}")
             return False
             
-        return True
-    except requests.exceptions.Timeout:
-        app_logger.error("Webhook request timed out after 10 seconds")
+    except requests.exceptions.Timeout as e:
+        app_logger.error(f"Request timed out: {str(e)}")
         return False
     except requests.exceptions.ConnectionError as e:
-        app_logger.error(f"Webhook connection error: {str(e)}")
+        app_logger.error(f"Connection error: {str(e)}")
         return False
     except requests.exceptions.RequestException as e:
-        app_logger.error(f"Webhook request failed: {str(e)}")
+        app_logger.error(f"Request failed: {str(e)}")
         return False
     except Exception as e:
-        app_logger.error(f"Unexpected error in webhook request: {str(e)}")
+        app_logger.error(f"Unexpected error: {str(e)}", exc_info=True)
         return False
 
 @app.route('/', methods=['GET', 'POST'])
@@ -176,23 +232,33 @@ def home():
                 db.close()
                 app_logger.info(f"Successfully saved RSVP to database for {name}")
 
-                # Send to webhook
+                # Prepare webhook data
                 rsvp_data = {
                     "name": name,
                     "email": email,
                     "guests": guests,
                     "message": message,
                     "food_contribution": food_contribution_str,
-                    "timestamp": timestamp
+                    "timestamp": timestamp,
+                    "source": "web",
+                    "version": "1.0"
                 }
                 
-                webhook_success = send_to_make_webhook(rsvp_data)
-                if webhook_success:
-                    app_logger.info("Webhook notification sent successfully")
-                    flash('Merci! Votre RSVP a été enregistré.', 'success')
-                else:
-                    app_logger.warning("RSVP saved but webhook notification failed")
-                    flash('Votre RSVP a été enregistré, mais il y a eu un problème avec la notification.', 'warning')
+                # Attempt webhook with retries
+                max_attempts = 3
+                for attempt in range(max_attempts):
+                    if attempt > 0:
+                        app_logger.info(f"Retrying webhook (attempt {attempt + 1}/{max_attempts})")
+                        time.sleep(2 ** attempt)  # exponential backoff
+                    
+                    webhook_success = send_to_make_webhook(rsvp_data)
+                    if webhook_success:
+                        app_logger.info("Webhook notification sent successfully")
+                        flash('Merci! Votre RSVP a été enregistré.', 'success')
+                        break
+                    elif attempt == max_attempts - 1:
+                        app_logger.warning("All webhook attempts failed")
+                        flash('Votre RSVP a été enregistré, mais il y a eu un problème avec la notification.', 'warning')
                 
                 return redirect(url_for('home'))
                 
