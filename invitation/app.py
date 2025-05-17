@@ -130,7 +130,13 @@ CONNECT_TIMEOUT = 5   # seconds
 READ_TIMEOUT = 5      # seconds
 
 def send_to_make_webhook(data):
-    app_logger.info(f"Preparing to send webhook data: {json.dumps(data, indent=2)}")
+    # Ensure all values are JSON-serializable (convert datetime to string)
+    def make_serializable(obj):
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        return obj
+    serializable_data = {k: make_serializable(v) for k, v in data.items()}
+    app_logger.info(f"Preparing to send webhook data: {json.dumps(serializable_data, indent=2)}")
     session = requests.Session()
     retry_strategy = Retry(
         total=5,
@@ -149,28 +155,27 @@ def send_to_make_webhook(data):
     session.mount("https://", adapter)
     session.mount("http://", adapter)
     headers = {
-        'Content-Type': 'application/json',
-        'User-Agent': 'RSVP-App/1.0',
-        'Accept': 'application/json'
+        'Content-Type': 'application/json'
     }
     try:
         start_time = time.time()
         response = session.post(
             MAKE_WEBHOOK_URL,
-            json=data,
+            json=serializable_data,
             headers=headers,
             timeout=(CONNECT_TIMEOUT, READ_TIMEOUT),
-            verify=True
+            verify=False  # temporary test
         )
         duration = time.time() - start_time
         app_logger.info(f"Webhook request completed in {duration:.2f} seconds")
         app_logger.info(f"Webhook response status: {response.status_code}")
         app_logger.info(f"Webhook response headers: {dict(response.headers)}")
+        app_logger.info(f"Response body: {response.text}")
         try:
             response_json = response.json()
-            app_logger.info(f"Webhook response body: {json.dumps(response_json, indent=2)}")
+            app_logger.info(f"Webhook response body (parsed): {json.dumps(response_json, indent=2)}")
         except Exception:
-            app_logger.info(f"Webhook response text: {response.text}")
+            pass
         if response.status_code == 200:
             app_logger.info("Webhook request successful")
             return True
