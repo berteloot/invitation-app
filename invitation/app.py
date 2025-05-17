@@ -15,6 +15,9 @@ import json
 from urllib3 import PoolManager
 import socket
 
+# Get the logger for this module
+app_logger = logging.getLogger('app')
+
 # Configure logging to use stdout/stderr
 logging.basicConfig(
     level=logging.INFO,
@@ -24,10 +27,6 @@ logging.basicConfig(
         logging.StreamHandler(sys.stderr)
     ]
 )
-
-# Create a logger for this module
-app_logger = logging.getLogger(__name__)
-app_logger.setLevel(logging.INFO)
 
 # Ensure the logger propagates to the root logger
 app_logger.propagate = True
