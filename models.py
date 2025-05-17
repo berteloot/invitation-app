@@ -72,6 +72,19 @@ class UserActivity(Base):
     
     user = relationship("User")
 
+class RSVP(Base):
+    __tablename__ = 'rsvps'
+    
+    id = Column(Integer, primary_key=True)
+    name = Column(String(100), nullable=False)
+    email = Column(String(100), nullable=False)
+    attending = Column(Integer, default=1)  # 1 for attending, 0 for not attending
+    guests = Column(Integer, default=0)
+    dietary_restrictions = Column(String(500))
+    food_contribution = Column(String(100))  # Store the selected food contribution category
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
 def init_db():
     """Initialize the database connection and create tables."""
     db_url = os.getenv('DATABASE_URL', 'sqlite:///job_persona.db')

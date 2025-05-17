@@ -124,6 +124,21 @@ def init_db():
             FOREIGN KEY (user_id) REFERENCES users (id)
         )
     ''')
+
+    # Create rsvps table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS rsvps (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            email TEXT NOT NULL,
+            attending INTEGER DEFAULT 1,
+            guests INTEGER DEFAULT 0,
+            dietary_restrictions TEXT,
+            food_contribution TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
     
     db.commit()
     db.close()
@@ -818,6 +833,73 @@ def summarize():
             return render_template('summarize.html')
     
     return render_template('summarize.html')
+
+@app.route('/check_rsvp', methods=['GET', 'POST'])
+def check_rsvp():
+    if request.method == 'POST':
+        email = request.form.get('email')
+        if not email:
+            flash('Please enter your email address.', 'danger')
+            return render_template('check_rsvp.html')
+        
+        db = get_db()
+        cursor = db.cursor()
+        cursor.execute('SELECT * FROM rsvps WHERE email = ?', (email,))
+        rsvp = cursor.fetchone()
+        db.close()
+        
+        if rsvp:
+            return render_template('check_rsvp.html', rsvp=rsvp)
+        else:
+            flash('No RSVP found for this email address.', 'warning')
+            return render_template('check_rsvp.html')
+    
+    return render_template('check_rsvp.html')
+
+@app.route('/rsvp', methods=['GET', 'POST'])
+def submit_rsvp():
+    if request.method == 'POST':
+        name = request.form.get('name')
+        email = request.form.get('email')
+        attending = int(request.form.get('attending', 1))
+        guests = int(request.form.get('guests', 0))
+        dietary_restrictions = request.form.get('dietary_restrictions', '')
+        food_contribution = request.form.get('food_contribution') if attending else None
+
+        if not name or not email:
+            flash('Please provide your name and email address.', 'danger')
+            return render_template('rsvp_form.html')
+
+        db = get_db()
+        cursor = db.cursor()
+        
+        # Check if RSVP already exists for this email
+        cursor.execute('SELECT id FROM rsvps WHERE email = ?', (email,))
+        existing_rsvp = cursor.fetchone()
+        
+        if existing_rsvp:
+            # Update existing RSVP
+            cursor.execute('''
+                UPDATE rsvps 
+                SET name = ?, attending = ?, guests = ?, dietary_restrictions = ?, 
+                    food_contribution = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE email = ?
+            ''', (name, attending, guests, dietary_restrictions, food_contribution, email))
+            flash('Your RSVP has been updated!', 'success')
+        else:
+            # Create new RSVP
+            cursor.execute('''
+                INSERT INTO rsvps (name, email, attending, guests, dietary_restrictions, food_contribution)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (name, email, attending, guests, dietary_restrictions, food_contribution))
+            flash('Thank you for your RSVP!', 'success')
+        
+        db.commit()
+        db.close()
+        
+        return redirect(url_for('check_rsvp'))
+    
+    return render_template('rsvp_form.html')
 
 if __name__ == "__main__":
     # Run the app
