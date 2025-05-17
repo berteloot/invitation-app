@@ -6,6 +6,7 @@ from functools import wraps
 import time
 import sqlite3
 import requests
+import sys
 
 # Load environment variables
 load_dotenv()
@@ -89,11 +90,14 @@ MAKE_WEBHOOK_URL = "https://hook.us1.make.com/hz3fzz8mba7sn4se4rl4klo55qbjd1j8"
 
 def send_to_make_webhook(data):
     print("Sending data to Make.com webhook:", data)
+    sys.stdout.flush()
     try:
         response = requests.post(MAKE_WEBHOOK_URL, json=data, timeout=5)
         print("Webhook response:", response.status_code, response.text)
+        sys.stdout.flush()
     except Exception as e:
         print(f"Failed to send webhook: {e}")
+        sys.stdout.flush()
 
 @app.route('/', methods=['GET', 'POST'])
 def home():
@@ -103,6 +107,8 @@ def home():
         guests = request.form.get('guests', '1')
         message = request.form.get('message', '')
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        print("Received RSVP submission:", name, email, guests, message)
+        sys.stdout.flush()
         if name and email:
             db = get_db()
             cursor = db.cursor()
