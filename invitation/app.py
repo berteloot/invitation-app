@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from functools import wraps
 import time
 import sqlite3
+import requests
 
 # Load environment variables
 load_dotenv()
@@ -84,6 +85,14 @@ def record_login_attempt(ip, success):
     else:
         login_attempts[ip] = (0, time.time())
 
+MAKE_WEBHOOK_URL = "https://hook.us1.make.com/hz3fzz8mba7sn4se4rl4klo55qbjd1j8"
+
+def send_to_make_webhook(data):
+    try:
+        requests.post(MAKE_WEBHOOK_URL, json=data, timeout=5)
+    except Exception as e:
+        print(f"Failed to send webhook: {e}")
+
 @app.route('/', methods=['GET', 'POST'])
 def home():
     if request.method == 'POST':
@@ -101,6 +110,17 @@ def home():
             ''', (name, email, guests, message, timestamp))
             db.commit()
             db.close()
+
+            # Send RSVP data to Make.com webhook
+            rsvp_data = {
+                "name": name,
+                "email": email,
+                "guests": guests,
+                "message": message,
+                "timestamp": timestamp
+            }
+            send_to_make_webhook(rsvp_data)
+
             flash('Merci! Votre RSVP a été enregistré.', 'success')
             return redirect(url_for('home'))
         else:
