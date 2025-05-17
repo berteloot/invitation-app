@@ -111,31 +111,6 @@ def record_login_attempt(ip, success):
 
 MAKE_WEBHOOK_URL = "https://hook.us1.make.com/hz3fzz8mba7sn4se4rl4klo55qbjd1j8"
 
-# Configure requests session with advanced retry strategy
-session = requests.Session()
-
-# Custom retry strategy with more granular control
-retry_strategy = Retry(
-    total=5,  # increased number of retries
-    backoff_factor=0.5,  # shorter initial backoff
-    backoff_max=10,  # maximum backoff time
-    status_forcelist=[408, 429, 500, 502, 503, 504],  # expanded list of retry status codes
-    allowed_methods=["POST"],  # only retry POST requests
-    respect_retry_after_header=True  # respect server's retry-after header
-)
-
-# Configure connection pooling
-adapter = HTTPAdapter(
-    max_retries=retry_strategy,
-    pool_connections=10,  # number of connections to keep in pool
-    pool_maxsize=10,  # maximum number of connections in pool
-    pool_block=False  # don't block when pool is full
-)
-
-# Mount the adapter for both HTTP and HTTPS
-session.mount("https://", adapter)
-session.mount("http://", adapter)
-
 # Configure timeouts
 DEFAULT_TIMEOUT = 10  # seconds
 CONNECT_TIMEOUT = 5   # seconds
@@ -146,18 +121,41 @@ def send_to_make_webhook(data):
     Send data to Make.com webhook with enhanced reliability and error handling.
     """
     app_logger.info(f"Preparing to send webhook data: {json.dumps(data, indent=2)}")
-    
+
+    # Create a fresh session for each call
+    session = requests.Session()
+
+    # Custom retry strategy with more granular control
+    retry_strategy = Retry(
+        total=5,  # increased number of retries
+        backoff_factor=0.5,  # shorter initial backoff
+        backoff_max=10,  # maximum backoff time
+        status_forcelist=[408, 429, 500, 502, 503, 504],  # expanded list of retry status codes
+        allowed_methods=["POST"],  # only retry POST requests
+        respect_retry_after_header=True  # respect server's retry-after header
+    )
+
+    # Configure connection pooling
+    adapter = HTTPAdapter(
+        max_retries=retry_strategy,
+        pool_connections=10,  # number of connections to keep in pool
+        pool_maxsize=10,  # maximum number of connections in pool
+        pool_block=False  # don't block when pool is full
+    )
+
+    # Mount the adapter for both HTTP and HTTPS
+    session.mount("https://", adapter)
+    session.mount("http://", adapter)
+
     # Prepare headers
     headers = {
         'Content-Type': 'application/json',
         'User-Agent': 'RSVP-App/1.0',
         'Accept': 'application/json'
     }
-    
+
     try:
         start_time = time.time()
-        
-        # Make the request with explicit timeouts
         response = session.post(
             MAKE_WEBHOOK_URL,
             json=data,
@@ -165,20 +163,15 @@ def send_to_make_webhook(data):
             timeout=(CONNECT_TIMEOUT, READ_TIMEOUT),
             verify=True  # verify SSL certificates
         )
-        
         duration = time.time() - start_time
         app_logger.info(f"Webhook request completed in {duration:.2f} seconds")
         app_logger.info(f"Webhook response status: {response.status_code}")
         app_logger.info(f"Webhook response headers: {dict(response.headers)}")
-        
-        # Try to parse response as JSON
         try:
             response_json = response.json()
             app_logger.info(f"Webhook response body: {json.dumps(response_json, indent=2)}")
         except json.JSONDecodeError:
             app_logger.info(f"Webhook response text: {response.text}")
-        
-        # Handle different response status codes
         if response.status_code == 200:
             app_logger.info("Webhook request successful")
             return True
@@ -191,7 +184,6 @@ def send_to_make_webhook(data):
         else:
             app_logger.error(f"Unexpected status code: {response.status_code}")
             return False
-            
     except requests.exceptions.Timeout as e:
         app_logger.error(f"Request timed out: {str(e)}")
         return False
