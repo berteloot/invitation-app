@@ -3,6 +3,7 @@ import sys
 import os
 from flask import Flask
 from dotenv import load_dotenv
+from invitation.app import app
 
 logging.basicConfig(
     level=logging.INFO,
@@ -34,4 +35,7 @@ app.config['ADMIN_PASSWORD'] = os.getenv('ADMIN_PASSWORD', 'admin123')  # Change
 for handler in root_logger.handlers:
     app.logger.addHandler(handler)
 app.logger.propagate = True
-app.logger.setLevel(logging.INFO) 
+app.logger.setLevel(logging.INFO)
+
+if app is None:
+    raise RuntimeError("Flask app failed to import") 
