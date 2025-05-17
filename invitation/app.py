@@ -12,30 +12,22 @@ from logging.handlers import RotatingFileHandler
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-# Configure logging
-log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs')
-os.makedirs(log_dir, exist_ok=True)
-log_file = os.path.join(log_dir, 'app.log')
-
-# Create a formatter
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-
-# Create a file handler
-file_handler = RotatingFileHandler(log_file, maxBytes=1024 * 1024, backupCount=5)
-file_handler.setFormatter(formatter)
-
-# Create a stream handler for console output
-stream_handler = logging.StreamHandler()
-stream_handler.setFormatter(formatter)
-
-# Get the root logger and configure it
-logger = logging.getLogger()
-logger.setLevel(logging.INFO)
-logger.addHandler(file_handler)
-logger.addHandler(stream_handler)
+# Configure logging to use stdout/stderr
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        logging.StreamHandler(sys.stderr)
+    ]
+)
 
 # Create a logger for this module
 app_logger = logging.getLogger(__name__)
+app_logger.setLevel(logging.INFO)
+
+# Ensure the logger propagates to the root logger
+app_logger.propagate = True
 
 # Load environment variables
 load_dotenv()
