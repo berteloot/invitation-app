@@ -83,23 +83,55 @@ def home():
         email = request.form.get('email')
         guests = request.form.get('guests', '1')
         message = request.form.get('message', '')
+        food_contribution = request.form.getlist('food_contribution')
+        food_contribution_str = ', '.join(food_contribution) if food_contribution else None
         
         if name and email:
-            rsvp = {
-                'name': name,
-                'email': email,
-                'guests': guests,
-                'message': message,
-                'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            }
-            rsvps.append(rsvp)
-            save_rsvps(rsvps)  # Save to file
+            db = get_db()
+            cursor = db.cursor()
+            cursor.execute('''
+                INSERT INTO rsvps (name, email, guests, dietary_restrictions, food_contribution)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (name, email, guests, message, food_contribution_str))
+            db.commit()
+            db.close()
+            
             flash('Merci! Votre RSVP a été enregistré.', 'success')
             return redirect(url_for('home'))
         else:
             flash('Veuillez remplir tous les champs obligatoires.', 'error')
     
-    return render_template('index.html', rsvps=rsvps)
+    db = get_db()
+    cursor = db.cursor()
+    cursor.execute('SELECT * FROM rsvps')
+    rsvps = cursor.fetchall()
+
+    # Count food contributions
+    bring_options = [
+        "Meat or Plant-Based Mains",
+        "Drinks",
+        "Side Dish or Salad",
+        "Dessert"
+    ]
+    bring_counts = {option: 0 for option in bring_options}
+    for rsvp in rsvps:
+        if rsvp['food_contribution']:
+            for option in bring_options:
+                if option in rsvp['food_contribution']:
+                    bring_counts[option] += 1
+
+    # Find the least selected (most needed) item(s)
+    min_count = min(bring_counts.values())
+    most_needed_items = [k for k, v in bring_counts.items() if v == min_count]
+
+    db.close()
+    
+    return render_template(
+        'index.html',
+        rsvps=rsvps,
+        bring_counts=bring_counts,
+        most_needed_items=most_needed_items
+    )
 
 @app.route('/admin/login', methods=['GET', 'POST'])
 def admin_login():
