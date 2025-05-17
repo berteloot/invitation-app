@@ -24,4 +24,4 @@ instance/
 .webassets-cache
 
 # Logs
-*.log 
+*.log Persona/
