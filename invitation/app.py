@@ -122,7 +122,7 @@ def record_login_attempt(ip, success):
     else:
         login_attempts[ip] = (0, time.time())
 
-MAKE_WEBHOOK_URL = "https://hook.us1.make.com/hz3fzz8mba7sn4se4rl4klo55qbjd1j8"
+MAKE_WEBHOOK_URL = os.getenv('MAKE_WEBHOOK_URL', "https://hook.us1.make.com/hz3fzz8mba7sn4se4rl4klo55qbjd1j8")
 
 # Configure timeouts
 DEFAULT_TIMEOUT = 10  # seconds
@@ -309,9 +309,17 @@ def test_print():
 
 @app.route('/test-webhook')
 def test_webhook():
-    import requests
-    r = requests.post('https://hook.us1.make.com/hz3fzz8mba7sn4se4rl4klo55qbjd1j8', json={'test': 'hello'})
-    return f"Status: {r.status_code}, Response: {r.text}"
+    test_data = {
+        "test": "hello",
+        "timestamp": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        "source": "test-endpoint",
+        "version": "1.0"
+    }
+    success = send_to_make_webhook(test_data)
+    if success:
+        return jsonify({"status": "success", "message": "Webhook test successful"}), 200
+    else:
+        return jsonify({"status": "error", "message": "Webhook test failed"}), 500
 
 if __name__ == '__main__':
     app_logger.info("App is starting in __main__")
