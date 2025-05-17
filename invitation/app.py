@@ -34,6 +34,14 @@ app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'default-dev-key')
 app.config['ENV'] = os.getenv('FLASK_ENV', 'production')
 app.config['ADMIN_PASSWORD'] = os.getenv('ADMIN_PASSWORD', 'admin123')  # Change this in production!
 
+# Ensure Flask and app_logger use Gunicorn's logger in production
+if __name__ != '__main__':
+    gunicorn_logger = logging.getLogger('gunicorn.error')
+    app.logger.handlers = gunicorn_logger.handlers
+    app.logger.setLevel(gunicorn_logger.level)
+    app_logger.handlers = gunicorn_logger.handlers
+    app_logger.setLevel(gunicorn_logger.level)
+
 # Database setup
 DB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance')
 os.makedirs(DB_DIR, exist_ok=True)
