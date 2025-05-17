@@ -1,4 +1,9 @@
-/* Basic reset */
+:root {
+    --french-blue: #002395;
+    --french-white: #FFFFFF;
+    --french-red: #ED2939;
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -6,26 +11,137 @@
 }
 
 body {
-    font-family: Arial, sans-serif;
+    font-family: 'Arial', sans-serif;
     line-height: 1.6;
-    padding: 20px;
+    background-color: var(--french-white);
+    color: #333;
 }
 
 .container {
-    max-width: 1200px;
+    max-width: 800px;
     margin: 0 auto;
     padding: 20px;
 }
 
 header {
-    background-color: #f4f4f4;
-    padding: 1rem;
+    background-color: var(--french-blue);
+    padding: 2rem;
     margin-bottom: 2rem;
+    color: var(--french-white);
+    text-align: center;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+header h1 {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+}
+
+.invitation-card {
+    background: var(--french-white);
+    border-radius: 10px;
+    padding: 2rem;
+    margin: 2rem 0;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    border: 2px solid var(--french-blue);
+}
+
+.event-details {
+    text-align: center;
+    margin: 2rem 0;
+}
+
+.event-details h2 {
+    color: var(--french-blue);
+    font-size: 2rem;
+    margin-bottom: 1rem;
+}
+
+.event-details p {
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
+}
+
+.date-time {
+    font-size: 1.5rem;
+    color: var(--french-red);
+    font-weight: bold;
+    margin: 1rem 0;
+}
+
+.rsvp-form {
+    max-width: 500px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background: var(--french-white);
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--french-blue);
+    font-weight: bold;
+}
+
+.form-group input,
+.form-group textarea {
+    width: 100%;
+    padding: 0.8rem;
+    border: 2px solid var(--french-blue);
+    border-radius: 5px;
+    font-size: 1rem;
+}
+
+.btn {
+    display: inline-block;
+    padding: 1rem 2rem;
+    background-color: var(--french-blue);
+    color: var(--french-white);
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1.1rem;
+    transition: background-color 0.3s ease;
+}
+
+.btn:hover {
+    background-color: var(--french-red);
 }
 
 footer {
     text-align: center;
-    padding: 1rem;
+    padding: 2rem;
     margin-top: 2rem;
-    background-color: #f4f4f4;
+    background-color: var(--french-blue);
+    color: var(--french-white);
+}
+
+.french-flag {
+    height: 4px;
+    background: linear-gradient(to right, var(--french-blue) 33%, var(--french-white) 33%, var(--french-white) 66%, var(--french-red) 66%);
+    margin: 1rem 0;
+}
+
+.alert {
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-radius: 5px;
+}
+
+.alert-success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.alert-error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
 } 
