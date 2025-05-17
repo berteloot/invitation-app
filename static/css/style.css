@@ -144,4 +144,48 @@ footer {
     background-color: #f8d7da;
     color: #721c24;
     border: 1px solid #f5c6cb;
+}
+
+.admin-panel {
+    background: var(--french-white);
+    border-radius: 10px;
+    padding: 2rem;
+    margin: 2rem 0;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.stats {
+    background: var(--french-blue);
+    color: var(--french-white);
+    padding: 1rem;
+    border-radius: 5px;
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+.stats p {
+    font-size: 1.2rem;
+    margin: 0.5rem 0;
+}
+
+.rsvp-list {
+    display: grid;
+    gap: 1rem;
+}
+
+.rsvp-card {
+    background: #f8f9fa;
+    border: 1px solid var(--french-blue);
+    border-radius: 5px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.rsvp-card h3 {
+    color: var(--french-blue);
+    margin-bottom: 0.5rem;
+}
+
+.rsvp-card p {
+    margin: 0.5rem 0;
 } 
