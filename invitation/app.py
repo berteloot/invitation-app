@@ -24,7 +24,17 @@ logging.basicConfig(
 logging.getLogger().setLevel(logging.INFO)
 logging.getLogger('werkzeug').setLevel(logging.INFO)
 app_logger = logging.getLogger('app')
+
+# Attach app_logger and app.logger to root logger handlers for Render/Gunicorn visibility
+root_logger = logging.getLogger()
+for handler in root_logger.handlers:
+    app_logger.addHandler(handler)
 app_logger.propagate = True
+app_logger.setLevel(logging.INFO)
+for handler in root_logger.handlers:
+    app.logger.addHandler(handler)
+app.logger.propagate = True
+app.logger.setLevel(logging.INFO)
 
 # Load environment variables
 load_dotenv()
@@ -293,5 +303,6 @@ def health_check():
     return {'status': 'healthy'}, 200
 
 if __name__ == '__main__':
+    app_logger.info("App is starting in __main__")
     port = int(os.getenv('PORT', 10000))
     app.run(host='0.0.0.0', port=port) 
