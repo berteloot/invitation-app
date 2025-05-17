@@ -1,0 +1,301 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">LinkedIn Content Strategist</h1>
+    
+    <!-- LinkedIn Authentication Section -->
+    <div class="card mb-4" id="authSection">
+        <div class="card-body">
+            <h5 class="card-title">LinkedIn Authentication</h5>
+            <p class="card-text">Please authenticate with your LinkedIn account to analyze profiles.</p>
+            <form id="authForm">
+                <div class="mb-3">
+                    <label for="linkedinEmail" class="form-label">LinkedIn Email</label>
+                    <input type="email" class="form-control" id="linkedinEmail" required>
+                </div>
+                <div class="mb-3">
+                    <label for="linkedinPassword" class="form-label">LinkedIn Password</label>
+                    <input type="password" class="form-control" id="linkedinPassword" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Authenticate</button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Profile Analysis Section -->
+    <div class="card mb-4" id="analysisSection" style="display: none;">
+        <div class="card-body">
+            <h5 class="card-title">Analyze LinkedIn Profile</h5>
+            <p class="card-text">Enter a LinkedIn profile URL to analyze their posts and engagement.</p>
+            <form id="analysisForm">
+                <div class="mb-3">
+                    <label for="profileUrl" class="form-label">Profile URL</label>
+                    <input type="url" class="form-control" id="profileUrl" 
+                           placeholder="https://www.linkedin.com/in/username or https://www.linkedin.com/company/companyname"
+                           required>
+                </div>
+                <button type="submit" class="btn btn-primary">Analyze Profile</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Analysis Results -->
+    <div id="analysisResults" style="display: none;">
+        <!-- Profile Info -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Profile Information</h5>
+                <div id="profileInfo">
+                    <!-- Profile info will be populated here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Engagement Stats -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Engagement Statistics</h5>
+                <div class="row" id="engagementStats">
+                    <!-- Stats will be populated here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Sentiment Analysis -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Sentiment Analysis</h5>
+                <div class="row" id="sentimentAnalysis">
+                    <!-- Sentiment data will be populated here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Content Recommendations -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Content Recommendations</h5>
+                <div id="contentRecommendations">
+                    <!-- Recommendations will be populated here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Performing Posts -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Top Performing Posts</h5>
+                <div id="topPosts">
+                    <!-- Top posts will be populated here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Export Button -->
+        <div class="text-center mb-4">
+            <button id="exportBtn" class="btn btn-success">Export Analysis</button>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Spinner -->
+<div id="loadingSpinner" class="text-center" style="display: none;">
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="mt-2">Analyzing LinkedIn profile...</p>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Handle LinkedIn authentication
+document.getElementById('authForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const email = document.getElementById('linkedinEmail').value;
+    const password = document.getElementById('linkedinPassword').value;
+    
+    try {
+        const response = await fetch('/lcs/authenticate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ email, password })
+        });
+        
+        if (!response.ok) {
+            throw new Error('Authentication failed');
+        }
+        
+        // Hide auth section and show analysis section
+        document.getElementById('authSection').style.display = 'none';
+        document.getElementById('analysisSection').style.display = 'block';
+        
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Authentication failed. Please check your credentials and try again.');
+    }
+});
+
+// Handle profile analysis
+document.getElementById('analysisForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const profileUrl = document.getElementById('profileUrl').value;
+    
+    // Show loading spinner
+    document.getElementById('loadingSpinner').style.display = 'block';
+    document.getElementById('analysisResults').style.display = 'none';
+    
+    try {
+        const response = await fetch('/lcs/analyze', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ profile_url: profileUrl })
+        });
+        
+        if (!response.ok) {
+            throw new Error('Analysis failed');
+        }
+        
+        const data = await response.json();
+        
+        // Populate profile info
+        const profileInfo = document.getElementById('profileInfo');
+        profileInfo.innerHTML = `
+            <h6>Name: ${data.profile_info.name}</h6>
+            ${data.profile_info.type === 'company' ? 
+                `<p>Description: ${data.profile_info.description}</p>
+                 <p>Followers: ${data.profile_info.followers}</p>` :
+                `<p>Headline: ${data.profile_info.headline}</p>
+                 <p>Connections: ${data.profile_info.connections}</p>`
+            }
+        `;
+        
+        // Populate engagement stats
+        const engagementStats = document.getElementById('engagementStats');
+        engagementStats.innerHTML = Object.entries(data.engagement_stats)
+            .map(([key, value]) => `
+                <div class="col-md-4 mb-3">
+                    <div class="card">
+                        <div class="card-body">
+                            <h6 class="card-title">${key.replace(/_/g, ' ').toUpperCase()}</h6>
+                            <p class="card-text">${value}</p>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        
+        // Populate sentiment analysis
+        const sentimentAnalysis = document.getElementById('sentimentAnalysis');
+        sentimentAnalysis.innerHTML = Object.entries(data.sentiment_analysis)
+            .map(([key, value]) => `
+                <div class="col-md-3 mb-3">
+                    <div class="card">
+                        <div class="card-body">
+                            <h6 class="card-title">${key.replace(/_/g, ' ').toUpperCase()}</h6>
+                            <p class="card-text">${value}</p>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        
+        // Populate recommendations
+        const recommendations = document.getElementById('contentRecommendations');
+        recommendations.innerHTML = Object.entries(data.content_recommendations)
+            .map(([key, value]) => {
+                if (typeof value === 'object') {
+                    return Object.entries(value)
+                        .map(([subkey, subvalue]) => `
+                            <div class="mb-3">
+                                <h6>${key.replace(/_/g, ' ').toUpperCase()} - ${subkey.replace(/_/g, ' ').toUpperCase()}</h6>
+                                <p>${subvalue}</p>
+                            </div>
+                        `).join('');
+                }
+                return `
+                    <div class="mb-3">
+                        <h6>${key.replace(/_/g, ' ').toUpperCase()}</h6>
+                        <p>${value}</p>
+                    </div>
+                `;
+            }).join('');
+        
+        // Populate top posts
+        const topPosts = document.getElementById('topPosts');
+        topPosts.innerHTML = data.top_posts.map(post => `
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h6 class="card-title">Post Content</h6>
+                    <p class="card-text">${post.content}</p>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <small>Engagement Rate: ${post.engagement_rate.toFixed(2)}%</small>
+                        </div>
+                        <div class="col-md-3">
+                            <small>Likes: ${post.likes}</small>
+                        </div>
+                        <div class="col-md-3">
+                            <small>Comments: ${post.comments}</small>
+                        </div>
+                        <div class="col-md-3">
+                            <small>Shares: ${post.shares}</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+        
+        // Show results
+        document.getElementById('loadingSpinner').style.display = 'none';
+        document.getElementById('analysisResults').style.display = 'block';
+        
+    } catch (error) {
+        console.error('Error:', error);
+        alert('An error occurred while analyzing the profile. Please try again.');
+        document.getElementById('loadingSpinner').style.display = 'none';
+    }
+});
+
+// Export functionality
+document.getElementById('exportBtn').addEventListener('click', async () => {
+    try {
+        const response = await fetch('/lcs/export', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                engagement_stats: document.getElementById('engagementStats').dataset.stats,
+                sentiment_analysis: document.getElementById('sentimentAnalysis').dataset.analysis,
+                content_recommendations: document.getElementById('contentRecommendations').dataset.recommendations
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error('Export failed');
+        }
+        
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'linkedin_analysis.csv';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        a.remove();
+        
+    } catch (error) {
+        console.error('Error:', error);
+        alert('An error occurred while exporting the analysis. Please try again.');
+    }
+});
+</script>
+{% endblock %} 

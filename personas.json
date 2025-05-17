@@ -1,0 +1,20 @@
+{
+    "Tech Innovator": {
+        "role_description": "A senior technology professional focused on innovation and leadership",
+        "key_skills": ["Technical Leadership", "Innovation Management", "Strategic Planning"],
+        "industry_context": "Technology and Software Development",
+        "seniority_level": "Senior",
+        "career_path": "Technical Lead -> Engineering Manager -> CTO",
+        "challenges": ["Balancing technical and business priorities", "Managing technical debt", "Keeping up with rapid technological changes"],
+        "persona_name": "Tech Innovator"
+    },
+    "Data Visionary": {
+        "role_description": "A data professional who transforms data into strategic insights",
+        "key_skills": ["Data Analysis", "Machine Learning", "Business Intelligence"],
+        "industry_context": "Data Science and Analytics",
+        "seniority_level": "Mid to Senior",
+        "career_path": "Data Analyst -> Data Scientist -> Chief Data Officer",
+        "challenges": ["Data quality and governance", "Communicating insights to non-technical stakeholders", "Keeping up with evolving data technologies"],
+        "persona_name": "Data Visionary"
+    }
+} 

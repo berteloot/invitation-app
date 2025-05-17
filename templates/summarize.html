@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="h4 mb-0">Text Summarization</h2>
+                </div>
+                <div class="card-body">
+                    <form id="summarizeForm" method="POST" action="{{ url_for('summarize') }}" class="mb-4">
+                        <div class="mb-4">
+                            <label for="text" class="form-label fw-bold">Text to Summarize</label>
+                            <textarea class="form-control" id="text" name="text" rows="6" required 
+                                    placeholder="Enter the text you want to summarize...">{{ original_text if original_text else '' }}</textarea>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="word_count" class="form-label fw-bold">Target Word Count</label>
+                            <input type="number" class="form-control" id="word_count" name="word_count" 
+                                   min="1" required placeholder="Enter desired word count"
+                                   value="{{ original_word_count if original_word_count else '' }}">
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="prompt" class="form-label fw-bold">Custom Prompt (Optional)</label>
+                            <textarea class="form-control" id="prompt" name="prompt" rows="3" 
+                                    placeholder="Enter custom instructions for the summarization..."></textarea>
+                            <div class="form-text">Leave empty to use default summarization prompt.</div>
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+                                <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                                Generate Summary
+                            </button>
+                        </div>
+                    </form>
+
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ category if category != 'error' else 'danger' }} alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+
+                    {% if summary %}
+                    <div class="card mt-4 border-success">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0">Generated Summary</h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="card-text">{{ summary }}</p>
+                            <div class="text-muted">
+                                <small>Word count: {{ word_count }}</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('summarizeForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const spinner = submitBtn.querySelector('.spinner-border');
+
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Remove any existing error alerts
+        const existingAlerts = document.querySelectorAll('.alert');
+        existingAlerts.forEach(alert => alert.remove());
+        
+        // Show loading state
+        submitBtn.disabled = true;
+        spinner.classList.remove('d-none');
+        
+        // Submit form
+        fetch(form.action, {
+            method: 'POST',
+            body: new FormData(form)
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.text();
+        })
+        .then(html => {
+            // Update the page content
+            document.documentElement.innerHTML = html;
+            // Reattach event listeners
+            document.getElementById('summarizeForm').addEventListener('submit', arguments.callee);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            // Show error message
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-danger alert-dismissible fade show';
+            alertDiv.innerHTML = `
+                <strong>Error:</strong> ${error.message || 'An error occurred while generating the summary. Please try again.'}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            `;
+            form.insertAdjacentElement('beforebegin', alertDiv);
+        })
+        .finally(() => {
+            // Reset loading state
+            submitBtn.disabled = false;
+            spinner.classList.add('d-none');
+        });
+    });
+});
+</script>
+{% endblock %} 
