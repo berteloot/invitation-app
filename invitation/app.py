@@ -215,6 +215,7 @@ def home():
         food_contribution_str = ','.join(food_contribution)
         app_logger.info(f"Received RSVP: name={name}, email={email}, guests={guests}, message={message}, food_contribution={food_contribution_str}")
         if name and email:
+            app_logger.info(f"✅ Webhook block entered for: name='{name}', email='{email}'")
             app_logger.info(f"Calling webhook for: {name}, {email}")
             try:
                 db = get_db()
@@ -261,6 +262,7 @@ def home():
                 app_logger.error(f"Error processing RSVP: {str(e)}", exc_info=True)
                 flash('Une erreur est survenue. Veuillez réessayer.', 'error')
         else:
+            app_logger.warning(f"❌ Webhook block skipped: name='{name}', email='{email}'")
             app_logger.warning("Missing required fields in RSVP submission")
             flash('Veuillez remplir tous les champs obligatoires.', 'error')
     db = get_db()
