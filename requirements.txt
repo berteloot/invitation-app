@@ -15,5 +15,4 @@ python-dateutil==2.8.2
 linkedin-api==2.0.0a3
 requests==2.31.0
 beautifulsoup4==4.12.2
-python-linkedin-v2==0.8.6
 gunicorn==21.2.0
