@@ -20,7 +20,7 @@ def get_db():
     db_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance')
     os.makedirs(db_dir, exist_ok=True)
     
-    db_path = os.path.join(db_dir, 'job_persona.db')
+    db_path = os.path.join(db_dir, 'invitation.db')
     db = sqlite3.connect(db_path)
     db.row_factory = sqlite3.Row
     return db
