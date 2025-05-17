@@ -7,6 +7,11 @@ import time
 import sqlite3
 import requests
 import sys
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 # Load environment variables
 load_dotenv()
@@ -106,6 +111,12 @@ def home():
         email = request.form.get('email')
         guests = request.form.get('guests', '1')
         message = request.form.get('message', '')
+        food_contribution = request.form.getlist('food_contribution')
+        food_contribution_str = ','.join(food_contribution)
+        
+        # Log the incoming data
+        logger.info(f"Received RSVP: name={name}, email={email}, guests={guests}, message={message}, food_contribution={food_contribution_str}")
+        
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         print("Received RSVP submission:", name, email, guests, message)
         sys.stdout.flush()
@@ -125,9 +136,15 @@ def home():
                 "email": email,
                 "guests": guests,
                 "message": message,
-                "timestamp": timestamp
+                "food_contribution": food_contribution_str
             }
             send_to_make_webhook(rsvp_data)
+
+            # Log the webhook request
+            logger.info("Sending webhook request to Make.com...")
+            response = requests.post(MAKE_WEBHOOK_URL, json=rsvp_data, timeout=5)
+            logger.info(f"Webhook response status: {response.status_code}")
+            logger.info(f"Webhook response text: {response.text}")
 
             flash('Merci! Votre RSVP a été enregistré.', 'success')
             return redirect(url_for('home'))
