@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+env/
+.env
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Flask
+instance/
+.webassets-cache
+
+# Logs
+*.log 
+
+MAKE_WEBHOOK_URL = "https://hook.us1.make.com/hz3fzz8mba7sn4se4rl4klo55qbjd1j8" 
+
+import logging
+
+# ... after app_logger = logging.getLogger('app')
+root_logger = logging.getLogger()
+for handler in root_logger.handlers:
+    app_logger.addHandler(handler)
+app_logger.propagate = True
+app_logger.setLevel(logging.INFO)
+
+for handler in root_logger.handlers:
+    app.logger.addHandler(handler)
+app.logger.propagate = True
+app.logger.setLevel(logging.INFO) 
+
+app_logger.info("App is starting in __main__") 

@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - B2B Persona Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .processing-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+        .processing-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <nav class="bg-white shadow">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex">
+                    <div class="flex-shrink-0 flex items-center">
+                        <h1 class="text-xl font-bold text-indigo-600">B2B Persona Generator</h1>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="{{ url_for('index') }}" class="text-gray-600 hover:text-gray-900">Home</a>
+                    <a href="{{ url_for('view_contacts') }}" class="text-gray-600 hover:text-gray-900">View Contacts</a>
+                    <a href="{{ url_for('logout') }}" class="text-gray-600 hover:text-gray-900">Logout</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="rounded-md p-4 mb-4 {% if category == 'error' %}bg-red-50 text-red-700{% else %}bg-green-50 text-green-700{% endif %}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% if upload_stats %}
+        <!-- Upload Confirmation -->
+        <div class="bg-white shadow sm:rounded-lg mb-8">
+            <div class="px-4 py-5 sm:p-6">
+                <h2 class="text-lg font-medium text-gray-900 mb-4">Upload Confirmation</h2>
+                <div class="grid grid-cols-1 gap-5 sm:grid-cols-3">
+                    <div class="bg-green-50 rounded-lg p-4">
+                        <dt class="text-sm font-medium text-green-800">Total Contacts Uploaded</dt>
+                        <dd class="mt-1 text-2xl font-semibold text-green-900">{{ upload_stats.total_contacts }}</dd>
+                    </div>
+                    <div class="bg-green-50 rounded-lg p-4">
+                        <dt class="text-sm font-medium text-green-800">Department Groups Created</dt>
+                        <dd class="mt-1 text-2xl font-semibold text-green-900">{{ upload_stats.total_departments }}</dd>
+                    </div>
+                    {% if upload_stats.ungrouped_count > 0 %}
+                    <div class="bg-yellow-50 rounded-lg p-4">
+                        <dt class="text-sm font-medium text-yellow-800">Ungrouped Job Titles</dt>
+                        <dd class="mt-1 text-2xl font-semibold text-yellow-900">{{ upload_stats.ungrouped_count }}</dd>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Statistics Cards -->
+        <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 mb-8">
+            <div class="bg-white overflow-hidden shadow rounded-lg">
+                <div class="px-4 py-5 sm:p-6">
+                    <dt class="text-sm font-medium text-gray-500 truncate">Total Contacts</dt>
+                    <dd class="mt-1 text-3xl font-semibold text-gray-900">{{ total_contacts }}</dd>
+                </div>
+            </div>
+            <div class="bg-white overflow-hidden shadow rounded-lg">
+                <div class="px-4 py-5 sm:p-6">
+                    <dt class="text-sm font-medium text-gray-500 truncate">Department Groups</dt>
+                    <dd class="mt-1 text-3xl font-semibold text-gray-900">{{ total_departments }}</dd>
+                </div>
+            </div>
+            <div class="bg-white overflow-hidden shadow rounded-lg">
+                <div class="px-4 py-5 sm:p-6">
+                    <dt class="text-sm font-medium text-gray-500 truncate">Suggested Personas</dt>
+                    <dd class="mt-1 text-3xl font-semibold text-gray-900">{{ personas|length }}</dd>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top Departments -->
+        <div class="bg-white shadow sm:rounded-lg mb-8">
+            <div class="px-4 py-5 sm:p-6">
+                <h2 class="text-lg font-medium text-gray-900 mb-4">Top Department Groups</h2>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact Count</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            {% for dept in top_departments %}
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ dept.name|title }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ dept.contacts|length }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Suggested Personas -->
+        <div class="bg-white shadow sm:rounded-lg">
+            <div class="px-4 py-5 sm:p-6">
+                <h2 class="text-lg font-medium text-gray-900 mb-4">Suggested Personas</h2>
+                <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                    {% for persona in personas %}
+                        <div class="bg-gray-50 rounded-lg p-6">
+                            <h3 class="text-lg font-medium text-gray-900 mb-2">{{ persona.title }}</h3>
+                            <p class="text-sm text-gray-500 mb-4">{{ persona.description }}</p>
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm font-medium text-indigo-600">{{ persona.department|title }}</span>
+                                <span class="text-sm text-gray-500">{{ persona.count }} contacts</span>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div id="processingOverlay" class="processing-overlay">
+            <div class="processing-spinner"></div>
+            <p class="mt-4 text-gray-700">Processing your contacts...</p>
+        </div>
+    </main>
+
+    <script>
+        // Show processing overlay when page loads with upload stats
+        document.addEventListener('DOMContentLoaded', function() {
+            {% if upload_stats %}
+                document.getElementById('processingOverlay').style.display = 'flex';
+                // Hide after 2 seconds to show the results
+                setTimeout(function() {
+                    document.getElementById('processingOverlay').style.display = 'none';
+                }, 2000);
+            {% endif %}
+        });
+    </script>
+</body>
+</html> 
