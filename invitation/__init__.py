@@ -1,0 +1,1 @@
+# This file makes the invitation directory a Python package 
