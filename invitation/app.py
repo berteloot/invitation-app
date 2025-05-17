@@ -302,6 +302,17 @@ def admin():
 def health_check():
     return {'status': 'healthy'}, 200
 
+@app.route('/test-print')
+def test_print():
+    print("PRINT TEST: This should appear in Render logs", flush=True)
+    return "Print test done"
+
+@app.route('/test-webhook')
+def test_webhook():
+    import requests
+    r = requests.post('https://hook.us1.make.com/hz3fzz8mba7sn4se4rl4klo55qbjd1j8', json={'test': 'hello'})
+    return f"Status: {r.status_code}, Response: {r.text}"
+
 if __name__ == '__main__':
     app_logger.info("App is starting in __main__")
     port = int(os.getenv('PORT', 10000))
