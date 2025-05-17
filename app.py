@@ -16,7 +16,12 @@ app.config['ENV'] = os.getenv('FLASK_ENV', 'production')
 app.config['ADMIN_PASSWORD'] = os.getenv('ADMIN_PASSWORD', 'admin123')  # Change this in production!
 
 def get_db():
-    db = sqlite3.connect('job_persona.db')
+    # Ensure the database directory exists
+    db_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance')
+    os.makedirs(db_dir, exist_ok=True)
+    
+    db_path = os.path.join(db_dir, 'job_persona.db')
+    db = sqlite3.connect(db_path)
     db.row_factory = sqlite3.Row
     return db
 
@@ -41,6 +46,10 @@ def init_db():
     
     db.commit()
     db.close()
+
+# Initialize the database when the app starts
+with app.app_context():
+    init_db()
 
 # Rate limiting configuration
 MAX_LOGIN_ATTEMPTS = 5
@@ -232,6 +241,5 @@ def health_check():
     return {'status': 'healthy'}, 200
 
 if __name__ == '__main__':
-    init_db()
     port = int(os.getenv('PORT', 10000))
     app.run(host='0.0.0.0', port=port)
