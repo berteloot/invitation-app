@@ -205,9 +205,10 @@ def send_to_make_webhook(data):
 def home():
     app_logger.info("Home route accessed")
     if request.method == 'POST':
-        app_logger.info(f"Form raw data: {dict(request.form)}")
+        app_logger.info(f"🟡 Raw form data: {dict(request.form)}")
         name = request.form.get('name')
         email = request.form.get('email')
+        app_logger.info(f"🟡 Parsed name: '{name}', email: '{email}'")
         guests = request.form.get('guests', '1')
         message = request.form.get('message', '')
         food_contribution = request.form.getlist('food_contribution')
