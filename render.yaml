@@ -3,7 +3,7 @@ services:
     name: invitation-app
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn app:app --config gunicorn_config.py --capture-output --log-level debug
+    startCommand: gunicorn invitation.app:app --config invitation/gunicorn_config.py --capture-output --log-level debug
     envVars:
       - key: PYTHON_VERSION
         value: 3.9.0
