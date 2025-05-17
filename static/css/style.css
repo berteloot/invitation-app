@@ -188,4 +188,23 @@ footer {
 
 .rsvp-card p {
     margin: 0.5rem 0;
+}
+
+.admin-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.admin-header h2 {
+    margin: 0;
+}
+
+.admin-header .btn {
+    background-color: var(--french-red);
+}
+
+.admin-header .btn:hover {
+    background-color: #c82333;
 } 
