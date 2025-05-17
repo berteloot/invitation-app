@@ -41,6 +41,51 @@
                     <label for="guests">Number of Guests</label>
                     <input type="number" id="guests" name="guests" min="1" value="1">
                 </div>
+
+                <div class="form-group">
+                    <label>What would you like to bring? (Select one or more)</label>
+                    <div style="margin-bottom: 0.5em; color: #002395; font-weight: 500;">
+                        Tip: Consider bringing the item with the fewest volunteers!
+                    </div>
+                    <div class="checkbox-group">
+                        <div class="checkbox-item{% if 'Meat or Plant-Based Mains' in most_needed_items %} most-needed{% endif %}">
+                            <input type="checkbox" id="bring_main" name="food_contribution" value="Meat or Plant-Based Mains">
+                            <label for="bring_main">Meat or Plant-Based Mains (Burgers, sausages, marinated tofu, or veggie skewers)
+                                <span style="color: #888; font-size: 0.95em;">({{ bring_counts['Meat or Plant-Based Mains'] }} bringing)</span>
+                                {% if 'Meat or Plant-Based Mains' in most_needed_items %}
+                                <span class="most-needed-badge">Most Needed</span>
+                                {% endif %}
+                            </label>
+                        </div>
+                        <div class="checkbox-item{% if 'Drinks' in most_needed_items %} most-needed{% endif %}">
+                            <input type="checkbox" id="bring_drinks" name="food_contribution" value="Drinks">
+                            <label for="bring_drinks">Drinks (Beer, wine, seltzers, or non-alcoholic options)
+                                <span style="color: #888; font-size: 0.95em;">({{ bring_counts['Drinks'] }} bringing)</span>
+                                {% if 'Drinks' in most_needed_items %}
+                                <span class="most-needed-badge">Most Needed</span>
+                                {% endif %}
+                            </label>
+                        </div>
+                        <div class="checkbox-item{% if 'Side Dish or Salad' in most_needed_items %} most-needed{% endif %}">
+                            <input type="checkbox" id="bring_sides" name="food_contribution" value="Side Dish or Salad">
+                            <label for="bring_sides">Side Dish or Salad (Pasta salad, coleslaw, potato salad, or grilled vegetables)
+                                <span style="color: #888; font-size: 0.95em;">({{ bring_counts['Side Dish or Salad'] }} bringing)</span>
+                                {% if 'Side Dish or Salad' in most_needed_items %}
+                                <span class="most-needed-badge">Most Needed</span>
+                                {% endif %}
+                            </label>
+                        </div>
+                        <div class="checkbox-item{% if 'Dessert' in most_needed_items %} most-needed{% endif %}">
+                            <input type="checkbox" id="bring_dessert" name="food_contribution" value="Dessert">
+                            <label for="bring_dessert">Dessert (Brownies, cookies, fruit salad, or ice cream bars)
+                                <span style="color: #888; font-size: 0.95em;">({{ bring_counts['Dessert'] }} bringing)</span>
+                                {% if 'Dessert' in most_needed_items %}
+                                <span class="most-needed-badge">Most Needed</span>
+                                {% endif %}
+                            </label>
+                        </div>
+                    </div>
+                </div>
                 
                 <div class="form-group">
                     <label for="message">Message (Optional)</label>
@@ -52,4 +97,4 @@
         </div>
     </div>
 </div>
-{% endblock %}
+{% endblock %} 

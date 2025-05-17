@@ -5,7 +5,6 @@ from datetime import datetime, timedelta
 import json
 from functools import wraps
 import time
-import sqlite3
 
 # Load environment variables
 load_dotenv()
@@ -15,46 +14,26 @@ app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'default-dev-key')
 app.config['ENV'] = os.getenv('FLASK_ENV', 'production')
 app.config['ADMIN_PASSWORD'] = os.getenv('ADMIN_PASSWORD', 'admin123')  # Change this in production!
 
-def get_db():
-    # Ensure the database directory exists
-    db_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance')
-    os.makedirs(db_dir, exist_ok=True)
-    
-    db_path = os.path.join(db_dir, 'invitation.db')
-    db = sqlite3.connect(db_path)
-    db.row_factory = sqlite3.Row
-    return db
-
-def init_db():
-    db = get_db()
-    cursor = db.cursor()
-    
-    # Create rsvps table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS rsvps (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
-            email TEXT NOT NULL,
-            attending INTEGER DEFAULT 1,
-            guests INTEGER DEFAULT 0,
-            dietary_restrictions TEXT,
-            food_contribution TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    
-    db.commit()
-    db.close()
-
-# Initialize the database when the app starts
-with app.app_context():
-    init_db()
+# File to store RSVPs
+RSVP_FILE = 'rsvps.json'
 
 # Rate limiting configuration
 MAX_LOGIN_ATTEMPTS = 5
 LOGIN_TIMEOUT = 300  # 5 minutes in seconds
 login_attempts = {}
+
+def load_rsvps():
+    if os.path.exists(RSVP_FILE):
+        with open(RSVP_FILE, 'r') as f:
+            return json.load(f)
+    return []
+
+def save_rsvps(rsvps):
+    with open(RSVP_FILE, 'w') as f:
+        json.dump(rsvps, f, indent=2)
+
+# Load existing RSVPs
+rsvps = load_rsvps()
 
 def login_required(f):
     @wraps(f)
@@ -104,50 +83,23 @@ def home():
         email = request.form.get('email')
         guests = request.form.get('guests', '1')
         message = request.form.get('message', '')
-        food_contribution = request.form.getlist('food_contribution')
-        food_contribution_str = ', '.join(food_contribution) if food_contribution else None
         
         if name and email:
-            db = get_db()
-            cursor = db.cursor()
-            cursor.execute('''
-                INSERT INTO rsvps (name, email, guests, dietary_restrictions, food_contribution)
-                VALUES (?, ?, ?, ?, ?)
-            ''', (name, email, guests, message, food_contribution_str))
-            db.commit()
-            db.close()
-            
+            rsvp = {
+                'name': name,
+                'email': email,
+                'guests': guests,
+                'message': message,
+                'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            }
+            rsvps.append(rsvp)
+            save_rsvps(rsvps)  # Save to file
             flash('Merci! Votre RSVP a été enregistré.', 'success')
             return redirect(url_for('home'))
         else:
             flash('Veuillez remplir tous les champs obligatoires.', 'error')
     
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute('SELECT * FROM rsvps')
-    rsvps = cursor.fetchall()
-
-    # Count food contributions
-    bring_options = [
-        "Meat or Plant-Based Mains",
-        "Drinks",
-        "Side Dish or Salad",
-        "Dessert"
-    ]
-    bring_counts = {option: 0 for option in bring_options}
-    for rsvp in rsvps:
-        if rsvp['food_contribution']:
-            for option in bring_options:
-                if option in rsvp['food_contribution']:
-                    bring_counts[option] += 1
-
-    # Find the least selected (most needed) item(s)
-    min_count = min(bring_counts.values())
-    most_needed_items = [k for k, v in bring_counts.items() if v == min_count]
-
-    db.close()
-    
-    return render_template('index.html', rsvps=rsvps, bring_counts=bring_counts, most_needed_items=most_needed_items)
+    return render_template('index.html', rsvps=rsvps)
 
 @app.route('/admin/login', methods=['GET', 'POST'])
 def admin_login():
@@ -180,83 +132,8 @@ def admin_logout():
 def admin():
     # Update last activity time
     session['last_activity'] = time.time()
-    
-    db = get_db()
-    cursor = db.cursor()
-    cursor.execute('SELECT * FROM rsvps')
-    rsvps = cursor.fetchall()
-    db.close()
-    
     total_guests = sum(int(rsvp['guests']) for rsvp in rsvps)
     return render_template('admin.html', rsvps=rsvps, total_guests=total_guests)
-
-@app.route('/check_rsvp', methods=['GET', 'POST'])
-def check_rsvp():
-    if request.method == 'POST':
-        email = request.form.get('email')
-        if not email:
-            flash('Please enter your email address.', 'danger')
-            return render_template('check_rsvp.html')
-        
-        db = get_db()
-        cursor = db.cursor()
-        cursor.execute('SELECT * FROM rsvps WHERE email = ?', (email,))
-        rsvp = cursor.fetchone()
-        db.close()
-        
-        if rsvp:
-            return render_template('check_rsvp.html', rsvp=rsvp)
-        else:
-            flash('No RSVP found for this email address.', 'warning')
-            return render_template('check_rsvp.html')
-    
-    return render_template('check_rsvp.html')
-
-@app.route('/rsvp', methods=['GET', 'POST'])
-def submit_rsvp():
-    if request.method == 'POST':
-        name = request.form.get('name')
-        email = request.form.get('email')
-        attending = int(request.form.get('attending', 1))
-        guests = int(request.form.get('guests', 0))
-        dietary_restrictions = request.form.get('dietary_restrictions', '')
-        food_contribution = request.form.getlist('food_contribution')
-        food_contribution_str = ', '.join(food_contribution) if food_contribution else None
-
-        if not name or not email:
-            flash('Please provide your name and email address.', 'danger')
-            return render_template('rsvp_form.html')
-
-        db = get_db()
-        cursor = db.cursor()
-        
-        # Check if RSVP already exists for this email
-        cursor.execute('SELECT id FROM rsvps WHERE email = ?', (email,))
-        existing_rsvp = cursor.fetchone()
-        
-        if existing_rsvp:
-            # Update existing RSVP
-            cursor.execute('''
-                UPDATE rsvps 
-                SET name = ?, attending = ?, guests = ?, dietary_restrictions = ?, 
-                    food_contribution = ?, updated_at = CURRENT_TIMESTAMP
-                WHERE email = ?
-            ''', (name, attending, guests, dietary_restrictions, food_contribution_str, email))
-            flash('Your RSVP has been updated!', 'success')
-        else:
-            # Create new RSVP
-            cursor.execute('''
-                INSERT INTO rsvps (name, email, attending, guests, dietary_restrictions, food_contribution)
-                VALUES (?, ?, ?, ?, ?, ?)
-            ''', (name, email, attending, guests, dietary_restrictions, food_contribution_str))
-            flash('Thank you for your RSVP!', 'success')
-        
-        db.commit()
-        db.close()
-        
-        return redirect(url_for('check_rsvp'))
-    
-    return render_template('rsvp_form.html')
 
 @app.route('/health')
 def health_check():
@@ -264,4 +141,4 @@ def health_check():
 
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 10000))
-    app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=port) 

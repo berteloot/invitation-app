@@ -20,6 +20,9 @@
                 <h3>{{ rsvp.name }}</h3>
                 <p><strong>Email:</strong> {{ rsvp.email }}</p>
                 <p><strong>Guests:</strong> {{ rsvp.guests }}</p>
+                {% if rsvp.food_contribution %}
+                <p><strong>Will Bring:</strong> {{ rsvp.food_contribution }}</p>
+                {% endif %}
                 {% if rsvp.message %}
                 <p><strong>Message:</strong> {{ rsvp.message }}</p>
                 {% endif %}
