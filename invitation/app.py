@@ -88,8 +88,10 @@ def record_login_attempt(ip, success):
 MAKE_WEBHOOK_URL = "https://hook.us1.make.com/hz3fzz8mba7sn4se4rl4klo55qbjd1j8"
 
 def send_to_make_webhook(data):
+    print("Sending data to Make.com webhook:", data)
     try:
-        requests.post(MAKE_WEBHOOK_URL, json=data, timeout=5)
+        response = requests.post(MAKE_WEBHOOK_URL, json=data, timeout=5)
+        print("Webhook response:", response.status_code, response.text)
     except Exception as e:
         print(f"Failed to send webhook: {e}")
 
