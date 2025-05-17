@@ -104,14 +104,16 @@ def home():
         email = request.form.get('email')
         guests = request.form.get('guests', '1')
         message = request.form.get('message', '')
+        food_contribution = request.form.getlist('food_contribution')
+        food_contribution_str = ', '.join(food_contribution) if food_contribution else None
         
         if name and email:
             db = get_db()
             cursor = db.cursor()
             cursor.execute('''
-                INSERT INTO rsvps (name, email, guests, dietary_restrictions)
-                VALUES (?, ?, ?, ?)
-            ''', (name, email, guests, message))
+                INSERT INTO rsvps (name, email, guests, dietary_restrictions, food_contribution)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (name, email, guests, message, food_contribution_str))
             db.commit()
             db.close()
             
@@ -124,9 +126,28 @@ def home():
     cursor = db.cursor()
     cursor.execute('SELECT * FROM rsvps')
     rsvps = cursor.fetchall()
+
+    # Count food contributions
+    bring_options = [
+        "Meat or Plant-Based Mains",
+        "Drinks",
+        "Side Dish or Salad",
+        "Dessert"
+    ]
+    bring_counts = {option: 0 for option in bring_options}
+    for rsvp in rsvps:
+        if rsvp['food_contribution']:
+            for option in bring_options:
+                if option in rsvp['food_contribution']:
+                    bring_counts[option] += 1
+
+    # Find the least selected (most needed) item(s)
+    min_count = min(bring_counts.values())
+    most_needed_items = [k for k, v in bring_counts.items() if v == min_count]
+
     db.close()
     
-    return render_template('index.html', rsvps=rsvps)
+    return render_template('index.html', rsvps=rsvps, bring_counts=bring_counts, most_needed_items=most_needed_items)
 
 @app.route('/admin/login', methods=['GET', 'POST'])
 def admin_login():
@@ -199,7 +220,8 @@ def submit_rsvp():
         attending = int(request.form.get('attending', 1))
         guests = int(request.form.get('guests', 0))
         dietary_restrictions = request.form.get('dietary_restrictions', '')
-        food_contribution = request.form.get('food_contribution') if attending else None
+        food_contribution = request.form.getlist('food_contribution')
+        food_contribution_str = ', '.join(food_contribution) if food_contribution else None
 
         if not name or not email:
             flash('Please provide your name and email address.', 'danger')
@@ -219,14 +241,14 @@ def submit_rsvp():
                 SET name = ?, attending = ?, guests = ?, dietary_restrictions = ?, 
                     food_contribution = ?, updated_at = CURRENT_TIMESTAMP
                 WHERE email = ?
-            ''', (name, attending, guests, dietary_restrictions, food_contribution, email))
+            ''', (name, attending, guests, dietary_restrictions, food_contribution_str, email))
             flash('Your RSVP has been updated!', 'success')
         else:
             # Create new RSVP
             cursor.execute('''
                 INSERT INTO rsvps (name, email, attending, guests, dietary_restrictions, food_contribution)
                 VALUES (?, ?, ?, ?, ?, ?)
-            ''', (name, email, attending, guests, dietary_restrictions, food_contribution))
+            ''', (name, email, attending, guests, dietary_restrictions, food_contribution_str))
             flash('Thank you for your RSVP!', 'success')
         
         db.commit()
