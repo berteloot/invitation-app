@@ -25,16 +25,12 @@ logging.getLogger().setLevel(logging.INFO)
 logging.getLogger('werkzeug').setLevel(logging.INFO)
 app_logger = logging.getLogger('app')
 
-# Attach app_logger and app.logger to root logger handlers for Render/Gunicorn visibility
+# Attach app_logger to root logger handlers for Render/Gunicorn visibility
 root_logger = logging.getLogger()
 for handler in root_logger.handlers:
     app_logger.addHandler(handler)
 app_logger.propagate = True
 app_logger.setLevel(logging.INFO)
-for handler in root_logger.handlers:
-    app.logger.addHandler(handler)
-app.logger.propagate = True
-app.logger.setLevel(logging.INFO)
 
 app_logger.info("BOOT-MARK 2025-05-17-23-20")
 
@@ -46,13 +42,11 @@ app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'default-dev-key')
 app.config['ENV'] = os.getenv('FLASK_ENV', 'production')
 app.config['ADMIN_PASSWORD'] = os.getenv('ADMIN_PASSWORD', 'admin123')  # Change this in production!
 
-# Ensure Flask and app_logger use Gunicorn's logger in production
-if __name__ != '__main__':
-    gunicorn_logger = logging.getLogger('gunicorn.error')
-    app.logger.handlers = gunicorn_logger.handlers
-    app.logger.setLevel(gunicorn_logger.level)
-    app_logger.handlers = gunicorn_logger.handlers
-    app_logger.setLevel(gunicorn_logger.level)
+# NOW attach handlers to app.logger
+for handler in root_logger.handlers:
+    app.logger.addHandler(handler)
+app.logger.propagate = True
+app.logger.setLevel(logging.INFO)
 
 # Database setup
 DB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'instance')
