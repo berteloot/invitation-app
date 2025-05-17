@@ -9,6 +9,8 @@ import requests
 import sys
 import logging
 from logging.handlers import RotatingFileHandler
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 # Configure logging
 log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs')
@@ -115,14 +117,46 @@ def record_login_attempt(ip, success):
 
 MAKE_WEBHOOK_URL = "https://hook.us1.make.com/hz3fzz8mba7sn4se4rl4klo55qbjd1j8"
 
+# Configure requests session with retry strategy
+session = requests.Session()
+retry_strategy = Retry(
+    total=3,  # number of retries
+    backoff_factor=1,  # wait 1, 2, 4 seconds between retries
+    status_forcelist=[500, 502, 503, 504]  # HTTP status codes to retry on
+)
+adapter = HTTPAdapter(max_retries=retry_strategy)
+session.mount("https://", adapter)
+session.mount("http://", adapter)
+
 def send_to_make_webhook(data):
-    app_logger.info(f"Sending data to Make.com webhook: {data}")
+    app_logger.info(f"Preparing to send webhook data: {data}")
     try:
-        response = requests.post(MAKE_WEBHOOK_URL, json=data, timeout=5)
+        start_time = time.time()
+        response = session.post(MAKE_WEBHOOK_URL, json=data, timeout=10)
+        duration = time.time() - start_time
+        
+        app_logger.info(f"Webhook request completed in {duration:.2f} seconds")
         app_logger.info(f"Webhook response status: {response.status_code}")
+        app_logger.info(f"Webhook response headers: {dict(response.headers)}")
         app_logger.info(f"Webhook response text: {response.text}")
+        
+        if response.status_code >= 400:
+            app_logger.error(f"Webhook request failed with status {response.status_code}")
+            return False
+            
+        return True
+    except requests.exceptions.Timeout:
+        app_logger.error("Webhook request timed out after 10 seconds")
+        return False
+    except requests.exceptions.ConnectionError as e:
+        app_logger.error(f"Webhook connection error: {str(e)}")
+        return False
+    except requests.exceptions.RequestException as e:
+        app_logger.error(f"Webhook request failed: {str(e)}")
+        return False
     except Exception as e:
-        app_logger.error(f"Failed to send webhook: {e}")
+        app_logger.error(f"Unexpected error in webhook request: {str(e)}")
+        return False
 
 @app.route('/', methods=['GET', 'POST'])
 def home():
@@ -134,14 +168,14 @@ def home():
         food_contribution = request.form.getlist('food_contribution')
         food_contribution_str = ','.join(food_contribution)
         
-        # Log the incoming data
         app_logger.info(f"Received RSVP: name={name}, email={email}, guests={guests}, message={message}, food_contribution={food_contribution_str}")
         
-        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         if name and email:
             try:
+                # Save to database
                 db = get_db()
                 cursor = db.cursor()
+                timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                 cursor.execute('''
                     INSERT INTO rsvps (name, email, guests, message, timestamp)
                     VALUES (?, ?, ?, ?, ?)
@@ -150,20 +184,28 @@ def home():
                 db.close()
                 app_logger.info(f"Successfully saved RSVP to database for {name}")
 
-                # Send RSVP data to Make.com webhook
+                # Send to webhook
                 rsvp_data = {
                     "name": name,
                     "email": email,
                     "guests": guests,
                     "message": message,
-                    "food_contribution": food_contribution_str
+                    "food_contribution": food_contribution_str,
+                    "timestamp": timestamp
                 }
-                send_to_make_webhook(rsvp_data)
-
-                flash('Merci! Votre RSVP a été enregistré.', 'success')
+                
+                webhook_success = send_to_make_webhook(rsvp_data)
+                if webhook_success:
+                    app_logger.info("Webhook notification sent successfully")
+                    flash('Merci! Votre RSVP a été enregistré.', 'success')
+                else:
+                    app_logger.warning("RSVP saved but webhook notification failed")
+                    flash('Votre RSVP a été enregistré, mais il y a eu un problème avec la notification.', 'warning')
+                
                 return redirect(url_for('home'))
+                
             except Exception as e:
-                app_logger.error(f"Error processing RSVP: {e}")
+                app_logger.error(f"Error processing RSVP: {str(e)}", exc_info=True)
                 flash('Une erreur est survenue. Veuillez réessayer.', 'error')
         else:
             app_logger.warning("Missing required fields in RSVP submission")
