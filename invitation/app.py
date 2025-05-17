@@ -8,10 +8,32 @@ import sqlite3
 import requests
 import sys
 import logging
+from logging.handlers import RotatingFileHandler
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logs')
+os.makedirs(log_dir, exist_ok=True)
+log_file = os.path.join(log_dir, 'app.log')
+
+# Create a formatter
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+# Create a file handler
+file_handler = RotatingFileHandler(log_file, maxBytes=1024 * 1024, backupCount=5)
+file_handler.setFormatter(formatter)
+
+# Create a stream handler for console output
+stream_handler = logging.StreamHandler()
+stream_handler.setFormatter(formatter)
+
+# Get the root logger and configure it
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+logger.addHandler(file_handler)
+logger.addHandler(stream_handler)
+
+# Create a logger for this module
+app_logger = logging.getLogger(__name__)
 
 # Load environment variables
 load_dotenv()
@@ -94,15 +116,13 @@ def record_login_attempt(ip, success):
 MAKE_WEBHOOK_URL = "https://hook.us1.make.com/hz3fzz8mba7sn4se4rl4klo55qbjd1j8"
 
 def send_to_make_webhook(data):
-    print("Sending data to Make.com webhook:", data)
-    sys.stdout.flush()
+    app_logger.info(f"Sending data to Make.com webhook: {data}")
     try:
         response = requests.post(MAKE_WEBHOOK_URL, json=data, timeout=5)
-        print("Webhook response:", response.status_code, response.text)
-        sys.stdout.flush()
+        app_logger.info(f"Webhook response status: {response.status_code}")
+        app_logger.info(f"Webhook response text: {response.text}")
     except Exception as e:
-        print(f"Failed to send webhook: {e}")
-        sys.stdout.flush()
+        app_logger.error(f"Failed to send webhook: {e}")
 
 @app.route('/', methods=['GET', 'POST'])
 def home():
@@ -115,40 +135,38 @@ def home():
         food_contribution_str = ','.join(food_contribution)
         
         # Log the incoming data
-        logger.info(f"Received RSVP: name={name}, email={email}, guests={guests}, message={message}, food_contribution={food_contribution_str}")
+        app_logger.info(f"Received RSVP: name={name}, email={email}, guests={guests}, message={message}, food_contribution={food_contribution_str}")
         
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        print("Received RSVP submission:", name, email, guests, message)
-        sys.stdout.flush()
         if name and email:
-            db = get_db()
-            cursor = db.cursor()
-            cursor.execute('''
-                INSERT INTO rsvps (name, email, guests, message, timestamp)
-                VALUES (?, ?, ?, ?, ?)
-            ''', (name, email, guests, message, timestamp))
-            db.commit()
-            db.close()
+            try:
+                db = get_db()
+                cursor = db.cursor()
+                cursor.execute('''
+                    INSERT INTO rsvps (name, email, guests, message, timestamp)
+                    VALUES (?, ?, ?, ?, ?)
+                ''', (name, email, guests, message, timestamp))
+                db.commit()
+                db.close()
+                app_logger.info(f"Successfully saved RSVP to database for {name}")
 
-            # Send RSVP data to Make.com webhook
-            rsvp_data = {
-                "name": name,
-                "email": email,
-                "guests": guests,
-                "message": message,
-                "food_contribution": food_contribution_str
-            }
-            send_to_make_webhook(rsvp_data)
+                # Send RSVP data to Make.com webhook
+                rsvp_data = {
+                    "name": name,
+                    "email": email,
+                    "guests": guests,
+                    "message": message,
+                    "food_contribution": food_contribution_str
+                }
+                send_to_make_webhook(rsvp_data)
 
-            # Log the webhook request
-            logger.info("Sending webhook request to Make.com...")
-            response = requests.post(MAKE_WEBHOOK_URL, json=rsvp_data, timeout=5)
-            logger.info(f"Webhook response status: {response.status_code}")
-            logger.info(f"Webhook response text: {response.text}")
-
-            flash('Merci! Votre RSVP a été enregistré.', 'success')
-            return redirect(url_for('home'))
+                flash('Merci! Votre RSVP a été enregistré.', 'success')
+                return redirect(url_for('home'))
+            except Exception as e:
+                app_logger.error(f"Error processing RSVP: {e}")
+                flash('Une erreur est survenue. Veuillez réessayer.', 'error')
         else:
+            app_logger.warning("Missing required fields in RSVP submission")
             flash('Veuillez remplir tous les champs obligatoires.', 'error')
     db = get_db()
     cursor = db.cursor()
