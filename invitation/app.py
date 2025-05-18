@@ -262,12 +262,20 @@ def home():
             app_logger.warning(f"❌ Webhook block skipped: name='{name}', email='{email}'")
             app_logger.warning("Missing required fields in RSVP submission")
             flash('Veuillez remplir tous les champs obligatoires.', 'error')
+    bring_counts = {
+        "Meat or Plant-Based Mains": 0,
+        "Salads": 0,
+        "Desserts": 0,
+        "Drinks": 0,
+        "Appetizers": 0,
+        "Other": 0
+    }
     db = get_db()
     cursor = db.cursor()
     cursor.execute('SELECT * FROM rsvps ORDER BY timestamp DESC')
     rsvps = cursor.fetchall()
     db.close()
-    return render_template('index.html', rsvps=rsvps)
+    return render_template('index.html', rsvps=rsvps, bring_counts=bring_counts)
 
 @app.route('/admin/login', methods=['GET', 'POST'])
 def admin_login():
