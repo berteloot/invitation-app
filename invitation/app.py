@@ -267,16 +267,23 @@ def home():
             flash('Veuillez remplir tous les champs obligatoires.', 'error')
     bring_counts = {
         "Meat or Plant-Based Mains": 0,
-        "Salads": 0,
-        "Desserts": 0,
         "Drinks": 0,
-        "Appetizers": 0,
-        "Other": 0
+        "Side Dish or Salad": 0,
+        "Dessert": 0
     }
     db = get_db()
     cursor = db.cursor()
     cursor.execute('SELECT * FROM rsvps ORDER BY timestamp DESC')
     rsvps = cursor.fetchall()
+    # Count food contributions
+    for rsvp in rsvps:
+        if rsvp.get('status', 'attending') == 'attending':
+            food_contribution = rsvp.get('food_contribution', '') if 'food_contribution' in rsvp.keys() else ''
+            if food_contribution:
+                for item in food_contribution.split(','):
+                    item = item.strip()
+                    if item in bring_counts:
+                        bring_counts[item] += 1
     db.close()
     return render_template('index.html', rsvps=rsvps, bring_counts=bring_counts)
 
