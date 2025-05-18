@@ -75,6 +75,23 @@ def init_db():
     db.commit()
     db.close()
 
+# Ensure food_contribution column exists (robust migration)
+def ensure_food_contribution_column():
+    db = get_db()
+    cursor = db.cursor()
+    try:
+        cursor.execute("ALTER TABLE rsvps ADD COLUMN food_contribution TEXT;")
+        db.commit()
+    except sqlite3.OperationalError as e:
+        if "duplicate column name" in str(e) or "already exists" in str(e):
+            pass  # Column already exists, ignore
+        else:
+            raise
+    db.close()
+
+# Call the migration on every startup
+ensure_food_contribution_column()
+
 with app.app_context():
     init_db()
 
