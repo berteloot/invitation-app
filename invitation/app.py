@@ -89,11 +89,9 @@ def ensure_food_contribution_column():
             raise
     db.close()
 
-# Call the migration on every startup
-ensure_food_contribution_column()
-
 with app.app_context():
     init_db()
+    ensure_food_contribution_column()
 
 # Rate limiting configuration
 MAX_LOGIN_ATTEMPTS = 5
