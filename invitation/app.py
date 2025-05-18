@@ -335,7 +335,7 @@ def admin():
     cursor.execute('SELECT * FROM rsvps ORDER BY timestamp DESC')
     rsvps = cursor.fetchall()
     db.close()
-    total_guests = sum(int(rsvp['guests']) for rsvp in rsvps)
+    total_guests = sum(int(rsvp['guests']) for rsvp in rsvps if rsvp['status'] == 'attending')
     return render_template('admin.html', rsvps=rsvps, total_guests=total_guests)
 
 @app.route('/health')
