@@ -26,7 +26,21 @@
                 {% endif %}
             {% endwith %}
             
-            <form method="POST">
+            <form method="POST" id="rsvpForm">
+                <div class="form-group">
+                    <label>Will you be attending? *</label>
+                    <div class="radio-group">
+                        <div class="radio-item">
+                            <input type="radio" id="attending" name="status" value="attending" checked onchange="toggleAttendanceFields(true)">
+                            <label for="attending">Yes, I'll be there!</label>
+                        </div>
+                        <div class="radio-item">
+                            <input type="radio" id="declined" name="status" value="declined" onchange="toggleAttendanceFields(false)">
+                            <label for="declined">Sorry, I can't make it</label>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="form-group">
                     <label for="name">Name *</label>
                     <input type="text" id="name" name="name" required>
@@ -37,12 +51,12 @@
                     <input type="email" id="email" name="email" required>
                 </div>
                 
-                <div class="form-group">
+                <div class="form-group attending-fields">
                     <label for="guests">Number of Guests</label>
                     <input type="number" id="guests" name="guests" min="1" value="1">
                 </div>
 
-                <div class="form-group">
+                <div class="form-group attending-fields">
                     <label>What would you like to bring? (Select one or more)</label>
                     <div style="margin-bottom: 0.5em; color: #002395; font-weight: 500;">
                         Tip: Consider bringing the item with the fewest volunteers!
@@ -92,9 +106,32 @@
                     <textarea id="message" name="message" rows="3"></textarea>
                 </div>
                 
-                <button type="submit" class="btn">Confirm Attendance</button>
+                <button type="submit" class="btn">Submit RSVP</button>
             </form>
         </div>
     </div>
 </div>
+
+<script>
+function toggleAttendanceFields(isAttending) {
+    const attendingFields = document.querySelectorAll('.attending-fields');
+    attendingFields.forEach(field => {
+        field.style.display = isAttending ? 'block' : 'none';
+    });
+    
+    // Reset guest count to 1 when declining
+    if (!isAttending) {
+        document.getElementById('guests').value = '1';
+        // Uncheck all food contribution checkboxes
+        document.querySelectorAll('input[name="food_contribution"]').forEach(checkbox => {
+            checkbox.checked = false;
+        });
+    }
+}
+
+// Initialize the form state
+document.addEventListener('DOMContentLoaded', function() {
+    toggleAttendanceFields(document.getElementById('attending').checked);
+});
+</script>
 {% endblock %} 

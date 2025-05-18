@@ -66,6 +66,7 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
             email TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'attending',
             guests INTEGER DEFAULT 1,
             message TEXT,
             timestamp TEXT
@@ -204,13 +205,14 @@ def home():
         app_logger.info(f"🟡 Raw form data: {dict(request.form)}")
         name = request.form.get('name')
         email = request.form.get('email')
+        status = request.form.get('status', 'attending')
         app.logger.info(f"raw form = {dict(request.form)}")
-        app.logger.info(f"name={name!r}  email={email!r}")
+        app.logger.info(f"name={name!r}  email={email!r}  status={status!r}")
         guests = request.form.get('guests', '1')
         message = request.form.get('message', '')
         food_contribution = request.form.getlist('food_contribution')
         food_contribution_str = ','.join(food_contribution)
-        app_logger.info(f"Received RSVP: name={name}, email={email}, guests={guests}, message={message}, food_contribution={food_contribution_str}")
+        app_logger.info(f"Received RSVP: name={name}, email={email}, status={status}, guests={guests}, message={message}, food_contribution={food_contribution_str}")
         if name and email:
             app_logger.info(f"✅ Webhook block entered for: name='{name}', email='{email}'")
             app_logger.info(f"Calling webhook for: {name}, {email}")
@@ -219,15 +221,16 @@ def home():
                 cursor = db.cursor()
                 timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                 cursor.execute('''
-                    INSERT INTO rsvps (name, email, guests, message, timestamp)
-                    VALUES (?, ?, ?, ?, ?)
-                ''', (name, email, guests, message, timestamp))
+                    INSERT INTO rsvps (name, email, status, guests, message, timestamp)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ''', (name, email, status, guests, message, timestamp))
                 db.commit()
                 db.close()
                 app_logger.info(f"Successfully saved RSVP to database for {name}")
                 rsvp_data = {
                     "name": name,
                     "email": email,
+                    "status": status,
                     "guests": guests,
                     "message": message,
                     "food_contribution": food_contribution_str,
