@@ -221,9 +221,9 @@ def home():
                 cursor = db.cursor()
                 timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                 cursor.execute('''
-                    INSERT INTO rsvps (name, email, status, guests, message, timestamp)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                ''', (name, email, status, guests, message, timestamp))
+                    INSERT INTO rsvps (name, email, status, guests, message, timestamp, food_contribution)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                ''', (name, email, status, guests, message, timestamp, food_contribution_str))
                 db.commit()
                 db.close()
                 app_logger.info(f"Successfully saved RSVP to database for {name}")
