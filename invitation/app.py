@@ -277,8 +277,8 @@ def home():
     rsvps = cursor.fetchall()
     # Count food contributions
     for rsvp in rsvps:
-        if rsvp.get('status', 'attending') == 'attending':
-            food_contribution = rsvp.get('food_contribution', '') if 'food_contribution' in rsvp.keys() else ''
+        if rsvp['status'] == 'attending':
+            food_contribution = rsvp['food_contribution'] if 'food_contribution' in rsvp.keys() else ''
             if food_contribution:
                 for item in food_contribution.split(','):
                     item = item.strip()
